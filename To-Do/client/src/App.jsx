@@ -130,7 +130,7 @@ function AuthScreen({ onAuth }) {
             fontFamily:"'Instrument Serif', serif", fontSize:42, fontWeight:400,
             color:"var(--text)", letterSpacing:"-1px", lineHeight:1
           }}>
-            TaskFlow
+            To-Do Application
           </div>
           <div style={{ marginTop:10, fontSize:11, color:"var(--text-hint)", letterSpacing:".12em", textTransform:"uppercase", fontWeight:600 }}>
             Personal task manager
@@ -188,9 +188,7 @@ function AuthScreen({ onAuth }) {
           </form>
         </div>
 
-        <p style={{ textAlign:"center", color:"var(--text-hint)", fontSize:11, marginTop:20, letterSpacing:".03em" }}>
-          Stored locally on your SQLite server
-        </p>
+      
       </div>
     </div>
   );
@@ -335,7 +333,7 @@ export default function App() {
           fontFamily:"'Instrument Serif', serif", fontSize:22, fontWeight:400,
           color:"var(--text)", letterSpacing:"-0.3px"
         }}>
-          TaskFlow
+          To-Do Application
         </span>
         <div style={{ display:"flex", alignItems:"center", gap:14 }}>
           <span style={{ fontSize:11, color:"var(--text-hint)", fontFamily:"'JetBrains Mono', monospace", letterSpacing:".03em" }}>

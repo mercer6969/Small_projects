@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg:          #0d0d0f;
+  --bg:          #0f0d0d;
   --bg2:         #131316;
   --bg3:         #1a1a1e;
   --surface:     #1e1e23;
@@ -13,9 +13,9 @@
   --text-muted:  #9491a7;
   --text-hint:   #5c5970;
 
-  --accent:      #7c6af7;
-  --accent-dim:  rgba(124,106,247,.15);
-  --accent-glow: rgba(124,106,247,.3);
+  --accent:      #6ac6f7;
+  --accent-dim:  rgba(106, 193, 247, 0.15);
+  --accent-glow: rgba(106, 160, 247, 0.3);
   --accent-inv:  #fff;
 
   --green:       #34d399;
