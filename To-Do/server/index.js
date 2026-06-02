@@ -12,7 +12,20 @@ const app = express();
 app.use(helmet());
 
 // ── CORS ──────────────────────────────────────────────────────
-app.use(cors());
+const allowedOrigins = process.env.CLIENT_ORIGIN
+  ? process.env.CLIENT_ORIGIN.split(",").map(o => o.trim())
+  : ["http://localhost:5173", "http://localhost:3000"];
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+}));
+
+app.use(express.json({ limit: "16kb" }));
 
 // ── Global rate limit ─────────────────────────────────────────
 app.use(rateLimit({
