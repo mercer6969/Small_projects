@@ -1,3 +1,5 @@
+app.use(cors());
+app.use(express.json({ limit: "16kb" })); // ← add this line
 require("dotenv").config();
 
 const express = require("express");
