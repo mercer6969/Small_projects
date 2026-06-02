@@ -1,3 +1,5 @@
+const express = require("express");
+const router = express.Router(); // use express.Router() not the standalone package
 const jwt = require("jsonwebtoken");
 
 module.exports = function (req, res, next) {
