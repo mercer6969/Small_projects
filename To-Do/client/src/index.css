@@ -76,7 +76,17 @@ input, textarea, select {
   outline: none;
   transition: border-color .18s, box-shadow .18s;
   appearance: none;
+  /* Prevent iOS zoom on focus (font-size must be >= 16px or use this) */
+  font-size: max(13px, 16px);
 }
+
+/* Keep visual size at 13px while keeping iOS happy */
+@supports (-webkit-touch-callout: none) {
+  input, textarea, select {
+    font-size: 16px;
+  }
+}
+
 input:focus, textarea:focus, select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-dim);
@@ -109,6 +119,9 @@ select option { background: var(--surface2); }
   background: transparent;
   color: var(--text-muted);
   text-transform: uppercase;
+  /* Better touch target on mobile */
+  min-height: 36px;
+  touch-action: manipulation;
 }
 .btn:hover { border-color: var(--border2); color: var(--text); }
 .btn:active { transform: translateY(1px); }
@@ -150,8 +163,8 @@ select option { background: var(--surface2); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -159,6 +172,7 @@ select option { background: var(--surface2); }
   cursor: pointer;
   transition: all .15s;
   flex-shrink: 0;
+  touch-action: manipulation;
 }
 .ibtn:hover { background: var(--surface2); color: var(--text-muted); }
 .ibtn.del:hover { background: var(--red-bg); color: var(--red); }
@@ -187,7 +201,7 @@ select option { background: var(--surface2); }
 
 /* ── Pill filters ────────────────────────────────────────────── */
 .pill {
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
@@ -199,6 +213,9 @@ select option { background: var(--surface2); }
   cursor: pointer;
   transition: all .15s;
   font-family: 'Syne', sans-serif;
+  white-space: nowrap;
+  touch-action: manipulation;
+  min-height: 30px;
 }
 .pill:hover { border-color: var(--border2); color: var(--text-muted); }
 .pill.on {
@@ -212,8 +229,8 @@ select option { background: var(--surface2); }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px 20px;
-  min-width: 90px;
+  padding: 14px 16px;
+  min-width: 70px;
   transition: border-color .2s;
 }
 .stat:hover { border-color: var(--border2); }
@@ -223,7 +240,7 @@ select option { background: var(--surface2); }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px 16px;
+  padding: 12px 14px;
   transition: border-color .2s, box-shadow .2s, opacity .2s;
   animation: fadeIn .2s ease;
 }
@@ -238,9 +255,9 @@ select option { background: var(--surface2); }
 
 /* ── Checkbox ────────────────────────────────────────────────── */
 .chk {
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
   border-radius: 5px;
   border: 1.5px solid var(--border2);
   background: transparent;
@@ -250,6 +267,7 @@ select option { background: var(--surface2); }
   justify-content: center;
   transition: all .15s;
   margin-top: 1px;
+  touch-action: manipulation;
 }
 .chk:hover { border-color: var(--accent); }
 .chk.checked { background: var(--accent); border-color: var(--accent); }
@@ -265,12 +283,21 @@ select option { background: var(--surface2); }
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: center;
+  align-items: flex-end; /* bottom sheet on mobile */
   justify-content: center;
   z-index: 200;
-  padding: 1rem;
+  padding: 0;
   animation: fadeInOverlay .15s ease;
 }
+
+/* On larger screens, center the modal */
+@media (min-width: 540px) {
+  .overlay {
+    align-items: center;
+    padding: 1rem;
+  }
+}
+
 @keyframes fadeInOverlay {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -279,26 +306,45 @@ select option { background: var(--surface2); }
 .modal {
   background: var(--bg2);
   border: 1px solid var(--border2);
-  border-radius: 14px;
-  padding: 28px;
+  border-radius: 14px 14px 0 0; /* bottom sheet style on mobile */
+  padding: 24px 20px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
   width: 100%;
-  max-width: 460px;
+  max-width: 100%;
   box-shadow: var(--shadow);
-  animation: slideUp .2s cubic-bezier(.34,1.3,.7,1);
+  animation: slideUpMobile .22s cubic-bezier(.34,1.2,.7,1);
+  max-height: 92svh;
+  overflow-y: auto;
 }
+
+@media (min-width: 540px) {
+  .modal {
+    border-radius: 14px;
+    padding: 28px;
+    max-width: 460px;
+    max-height: none;
+    animation: slideUp .2s cubic-bezier(.34,1.3,.7,1);
+  }
+}
+
+@keyframes slideUpMobile {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: none; }
+}
+
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(16px) scale(.97); }
   to   { opacity: 1; transform: none; }
 }
 
 /* ── Form grid ───────────────────────────────────────────────── */
-.form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-@media (max-width: 500px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (min-width: 400px) { .form-grid { grid-template-columns: 1fr 1fr 1fr; } }
 
 /* ── Toast ───────────────────────────────────────────────────── */
 .toast {
   position: fixed;
-  bottom: 28px;
+  bottom: calc(28px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   background: var(--surface2);
@@ -318,4 +364,20 @@ select option { background: var(--surface2); }
 @keyframes toastIn {
   from { opacity: 0; transform: translateX(-50%) translateY(10px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Mobile-specific overrides ───────────────────────────────── */
+@media (max-width: 480px) {
+  .stat {
+    padding: 10px 12px;
+  }
+
+  .card {
+    padding: 10px 12px;
+  }
+
+  .btn {
+    padding: 7px 12px;
+    font-size: 11px;
+  }
 }

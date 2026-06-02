@@ -1,7 +1,8 @@
 import React from "react";
 const { useState, useEffect, useCallback } = React;
 
-const API = "http://localhost:5000/api";
+// Use env var so it works in any environment; fallback to localhost for dev
+const API = (import.meta.env.VITE_API_URL || "http://localhost:5000/api");
 const TOK_KEY = "tf_token";
 const USR_KEY = "tf_user";
 
@@ -36,6 +37,11 @@ async function api(path, opts = {}) {
   return data;
 }
 
+// Check if error is auth-related (token expired/invalid)
+function isAuthError(msg) {
+  return /token|unauthorized|expired/i.test(msg || "");
+}
+
 const isOverdue = t =>
   !t.completed && t.dueDate && new Date(t.dueDate + "T00:00:00") < new Date();
 
@@ -51,13 +57,22 @@ function TaskForm({ task, setTask, onSubmit, onCancel, submitLabel, loading, err
     <form onSubmit={onSubmit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
       <div>
         <div className="label">Title *</div>
-        <input placeholder="What needs to be done?" value={task.title}
-          onChange={e => setTask(t => ({ ...t, title: e.target.value }))} autoFocus />
+        <input
+          placeholder="What needs to be done?"
+          value={task.title}
+          onChange={e => setTask(t => ({ ...t, title: e.target.value }))}
+          maxLength={200}
+          autoFocus
+        />
       </div>
       <div>
         <div className="label">Description</div>
-        <textarea placeholder="Add some details (optional)…" value={task.description || ""}
-          onChange={e => setTask(t => ({ ...t, description: e.target.value }))} />
+        <textarea
+          placeholder="Add some details (optional)…"
+          value={task.description || ""}
+          onChange={e => setTask(t => ({ ...t, description: e.target.value }))}
+          maxLength={2000}
+        />
       </div>
       <div className="form-grid">
         <div>
@@ -74,8 +89,11 @@ function TaskForm({ task, setTask, onSubmit, onCancel, submitLabel, loading, err
         </div>
         <div>
           <div className="label">Due date</div>
-          <input type="date" value={task.dueDate || ""}
-            onChange={e => setTask(t => ({ ...t, dueDate: e.target.value }))} />
+          <input
+            type="date"
+            value={task.dueDate || ""}
+            onChange={e => setTask(t => ({ ...t, dueDate: e.target.value }))}
+          />
         </div>
       </div>
       {error && <p style={{ color:"var(--red)", fontSize:12, marginTop:-4 }}>{error}</p>}
@@ -101,7 +119,7 @@ function AuthScreen({ onAuth }) {
     setError("");
     if (!form.username.trim() || !form.password) return setError("Please fill in all fields.");
     if (mode === "register") {
-      if (form.password.length < 6) return setError("Password must be at least 6 characters.");
+      if (form.password.length < 8) return setError("Password must be at least 8 characters.");
       if (form.password !== form.confirm) return setError("Passwords do not match.");
     }
     setLoading(true);
@@ -119,15 +137,15 @@ function AuthScreen({ onAuth }) {
 
   return (
     <div style={{
-      minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center",
-      padding:"2rem", background:"var(--bg)",
+      minHeight:"100svh", display:"flex", alignItems:"center", justifyContent:"center",
+      padding:"1.5rem", background:"var(--bg)",
       backgroundImage:"radial-gradient(ellipse 60% 50% at 50% -10%, rgba(124,106,247,.12), transparent)"
     }}>
       <div style={{ width:"100%", maxWidth:360 }}>
         {/* Brand */}
         <div style={{ marginBottom:"2.5rem", textAlign:"center" }}>
           <div style={{
-            fontFamily:"'Instrument Serif', serif", fontSize:42, fontWeight:400,
+            fontFamily:"'Instrument Serif', serif", fontSize:38, fontWeight:400,
             color:"var(--text)", letterSpacing:"-1px", lineHeight:1
           }}>
             To-Do Application
@@ -140,7 +158,7 @@ function AuthScreen({ onAuth }) {
         {/* Card */}
         <div style={{
           background:"var(--surface)", border:"1px solid var(--border)",
-          borderRadius:14, padding:28, boxShadow:"0 8px 40px rgba(0,0,0,.4)"
+          borderRadius:14, padding:"24px 20px", boxShadow:"0 8px 40px rgba(0,0,0,.4)"
         }}>
           {/* Tab toggle */}
           <div style={{ display:"flex", background:"var(--bg2)", borderRadius:8, padding:3, marginBottom:22, gap:3 }}>
@@ -162,22 +180,36 @@ function AuthScreen({ onAuth }) {
           <form onSubmit={submit} style={{ display:"flex", flexDirection:"column", gap:10 }}>
             <div>
               <div className="label">Username</div>
-              <input placeholder="your_username" value={form.username}
+              <input
+                placeholder="your_username"
+                value={form.username}
                 onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-                autoComplete="username" />
+                autoComplete="username"
+                maxLength={32}
+              />
             </div>
             <div>
               <div className="label">Password</div>
-              <input type="password" placeholder="••••••••" value={form.password}
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                autoComplete={mode==="login" ? "current-password" : "new-password"} />
+                autoComplete={mode==="login" ? "current-password" : "new-password"}
+                maxLength={128}
+              />
             </div>
             {mode === "register" && (
               <div>
                 <div className="label">Confirm password</div>
-                <input type="password" placeholder="••••••••" value={form.confirm}
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={form.confirm}
                   onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
-                  autoComplete="new-password" />
+                  autoComplete="new-password"
+                  maxLength={128}
+                />
               </div>
             )}
             {error && <p style={{ color:"var(--red)", fontSize:12 }}>{error}</p>}
@@ -187,8 +219,6 @@ function AuthScreen({ onAuth }) {
             </button>
           </form>
         </div>
-
-      
       </div>
     </div>
   );
@@ -214,19 +244,25 @@ export default function App() {
     setTimeout(() => setToast(null), 2600);
   }, []);
 
+  function handleAuthError(err) {
+    if (isAuthError(err.message)) {
+      clearAuth();
+      setUser(null);
+      setTasks([]);
+    }
+  }
+
   async function loadTasks() {
     setLoading(true);
     try {
       const data = await api("/tasks");
       setTasks(data);
     } catch(err) {
-      if (err.message.includes("token") || err.message.includes("Token")) {
-        clearAuth(); setUser(null);
-      }
+      handleAuthError(err);
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { if (user) loadTasks(); }, [user]);
+  useEffect(() => { if (user) loadTasks(); }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function logout() { clearAuth(); setUser(null); setTasks([]); }
 
@@ -240,8 +276,10 @@ export default function App() {
       setNewTask({ title:"", description:"", category:"Personal", priority:"medium", dueDate:"" });
       setShowAdd(false);
       toast$("Task added ✓");
-    } catch(err) { setFormError(err.message); }
-    finally { setFormLoading(false); }
+    } catch(err) {
+      setFormError(err.message);
+      handleAuthError(err);
+    } finally { setFormLoading(false); }
   }
 
   async function updateTask(e) {
@@ -256,8 +294,10 @@ export default function App() {
       setTasks(ts => ts.map(t => t.id === updated.id ? updated : t));
       setEditing(null);
       toast$("Task updated ✓");
-    } catch(err) { setFormError(err.message); }
-    finally { setFormLoading(false); }
+    } catch(err) {
+      setFormError(err.message);
+      handleAuthError(err);
+    } finally { setFormLoading(false); }
   }
 
   async function toggleComplete(task) {
@@ -267,7 +307,10 @@ export default function App() {
       });
       setTasks(ts => ts.map(t => t.id === updated.id ? updated : t));
       toast$(updated.completed ? "Completed ✓" : "Marked active");
-    } catch(err) { toast$(err.message, "err"); }
+    } catch(err) {
+      toast$(err.message, "err");
+      handleAuthError(err);
+    }
   }
 
   async function deleteTask(id) {
@@ -276,7 +319,10 @@ export default function App() {
       setTasks(ts => ts.filter(t => t.id !== id));
       setDeleting(null);
       toast$("Task deleted", "err");
-    } catch(err) { toast$(err.message, "err"); }
+    } catch(err) {
+      toast$(err.message, "err");
+      handleAuthError(err);
+    }
   }
 
   async function clearCompleted() {
@@ -284,7 +330,10 @@ export default function App() {
       const { deleted } = await api("/tasks/completed/all", { method:"DELETE" });
       setTasks(ts => ts.filter(t => !t.completed));
       toast$(`${deleted} task${deleted!==1?"s":""} cleared`);
-    } catch(err) { toast$(err.message, "err"); }
+    } catch(err) {
+      toast$(err.message, "err");
+      handleAuthError(err);
+    }
   }
 
   if (!user) return <AuthScreen onAuth={u => setUser(u)} />;
@@ -319,46 +368,52 @@ export default function App() {
   const Divider = () => <div className="div-v" style={{ alignSelf:"stretch" }}/>;
 
   return (
-    <div style={{ minHeight:"100vh", background:"var(--bg)" }}>
+    <div style={{ minHeight:"100svh", background:"var(--bg)" }}>
 
       {/* ── Header ── */}
       <header style={{
         background:"var(--bg2)", borderBottom:"1px solid var(--border)",
-        padding:"0 2rem", height:56,
+        padding:"0 1rem", height:52,
         display:"flex", alignItems:"center", justifyContent:"space-between",
         position:"sticky", top:0, zIndex:50,
         backdropFilter:"blur(10px)"
       }}>
         <span style={{
-          fontFamily:"'Instrument Serif', serif", fontSize:22, fontWeight:400,
-          color:"var(--text)", letterSpacing:"-0.3px"
+          fontFamily:"'Instrument Serif', serif", fontSize:18, fontWeight:400,
+          color:"var(--text)", letterSpacing:"-0.3px", whiteSpace:"nowrap"
         }}>
           To-Do Application
         </span>
-        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-          <span style={{ fontSize:11, color:"var(--text-hint)", fontFamily:"'JetBrains Mono', monospace", letterSpacing:".03em" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
+          <span style={{
+            fontSize:11, color:"var(--text-hint)",
+            fontFamily:"'JetBrains Mono', monospace",
+            letterSpacing:".03em",
+            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+            maxWidth:120
+          }}>
             {user}
           </span>
           <button className="btn btn-ghost" onClick={logout}
-            style={{ fontSize:10, padding:"5px 12px", letterSpacing:".08em" }}>
+            style={{ fontSize:10, padding:"5px 10px", letterSpacing:".08em", flexShrink:0 }}>
             Sign out
           </button>
         </div>
       </header>
 
-      <main style={{ maxWidth:820, margin:"0 auto", padding:"2rem 1.5rem 6rem" }}>
+      <main style={{ maxWidth:820, margin:"0 auto", padding:"1.5rem 1rem 6rem" }}>
 
         {/* ── Stats ── */}
-        <div style={{ display:"flex", gap:10, marginBottom:28, flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:8, marginBottom:24, flexWrap:"wrap" }}>
           {[
             { label:"Total",     val: stats.total, color:"var(--text)",  sub: "tasks" },
             { label:"Done",      val: stats.done,  color:"var(--green)", sub: "completed" },
             { label:"Remaining", val: stats.rem,   color:"var(--amber)", sub: "active" },
             { label:"Overdue",   val: stats.over,  color: stats.over>0 ? "var(--red)" : "var(--text-hint)", sub: "overdue" },
           ].map(s => (
-            <div key={s.label} className="stat" style={{ flex:"1 1 80px" }}>
+            <div key={s.label} className="stat" style={{ flex:"1 1 70px", minWidth:0 }}>
               <div className="label">{s.label}</div>
-              <div style={{ fontSize:32, fontFamily:"'Instrument Serif', serif", color:s.color, lineHeight:1.1, marginTop:2 }}>
+              <div style={{ fontSize:28, fontFamily:"'Instrument Serif', serif", color:s.color, lineHeight:1.1, marginTop:2 }}>
                 {s.val}
               </div>
               <div style={{ fontSize:10, color:"var(--text-hint)", marginTop:3, fontWeight:600, letterSpacing:".06em", textTransform:"uppercase" }}>
@@ -369,8 +424,8 @@ export default function App() {
         </div>
 
         {/* ── Toolbar ── */}
-        <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
-          <div style={{ position:"relative", flex:1, minWidth:160 }}>
+        <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap", alignItems:"center" }}>
+          <div style={{ position:"relative", flex:"1 1 160px", minWidth:0 }}>
             <svg style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", color:"var(--text-hint)" }}
               width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -379,14 +434,14 @@ export default function App() {
               onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
               style={{ paddingLeft:30 }}/>
           </div>
-          <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ width:"auto", minWidth:120 }}>
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ width:"auto", minWidth:130, flex:"0 1 auto" }}>
             <option value="created">Newest first</option>
             <option value="priority">By priority</option>
             <option value="due">By due date</option>
             <option value="alpha">Alphabetical</option>
           </select>
           <button className="btn btn-primary" onClick={() => { setShowAdd(true); setFormError(""); }}
-            style={{ whiteSpace:"nowrap", gap:5 }}>
+            style={{ whiteSpace:"nowrap", gap:5, flexShrink:0 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M12 5v14M5 12h14"/>
             </svg>
@@ -395,7 +450,10 @@ export default function App() {
         </div>
 
         {/* ── Filters ── */}
-        <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:22, alignItems:"center" }}>
+        <div style={{
+          display:"flex", gap:5, flexWrap:"wrap", marginBottom:20, alignItems:"center",
+          overflowX:"auto", WebkitOverflowScrolling:"touch", paddingBottom:2
+        }}>
           {["all","active","done"].map(s => (
             <button key={s} className={`pill${filter.status===s?" on":""}`}
               onClick={() => setFilter(f => ({ ...f, status:s }))}>
@@ -439,7 +497,7 @@ export default function App() {
           <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
             {visible.map(task => (
               <div key={task.id} className={`card${task.completed?" done":""}${isOverdue(task)?" overdue":""}`}>
-                <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
                   {/* Checkbox */}
                   <button className={`chk${task.completed?" checked":""}`}
                     onClick={() => toggleComplete(task)} aria-label="Toggle complete">
@@ -471,7 +529,7 @@ export default function App() {
                       <p style={{ fontSize:12, color:"var(--text-muted)", lineHeight:1.6, marginBottom:6 }}>
                         {task.description}
                       </p>}
-                    <div style={{ fontSize:11, color:"var(--text-hint)", display:"flex", gap:14, fontFamily:"'JetBrains Mono', monospace" }}>
+                    <div style={{ fontSize:11, color:"var(--text-hint)", display:"flex", gap:14, fontFamily:"'JetBrains Mono', monospace", flexWrap:"wrap" }}>
                       {task.dueDate &&
                         <span>due {new Date(task.dueDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>}
                       <span>added {new Date(task.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
