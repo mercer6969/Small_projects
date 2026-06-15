@@ -1,7 +1,7 @@
 import { AuthProvider, useAuth } from './lib/auth';
 import { useState, useEffect, FormEvent } from 'react';
 import { supabase } from './lib/supabase';
-import { LogOut, Plus, Edit3, Trash2, ArrowLeft, PenTool } from 'lucide-react';
+import { LogOut, Plus, Edit3, Trash2, ArrowLeft, BookOpen } from 'lucide-react';
 
 interface Post {
   id: string;
@@ -117,8 +117,8 @@ function Header({ view, setView, goHome }: { view: View; setView: (v: View) => v
     <header className="border-b border-stone-200 bg-white">
       <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
         <button onClick={goHome} className="flex items-center gap-2 text-stone-700 hover:text-stone-900 font-medium">
-          <PenTool size={20} />
-          <span>My Journal</span>
+          <BookOpen size={20} />
+          <span>Blog</span>
         </button>
         <div className="flex items-center gap-3">
           {user ? (
