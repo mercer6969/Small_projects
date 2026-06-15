@@ -110,6 +110,34 @@ During this internship, I gained experience in:
 * Using Git and GitHub for version control
 
 ---
+## Task 4 – Blogging Platform with User Authentication
+
+### Description
+
+Developed a full-stack blogging platform that enables users to create and manage their own blog content. The application includes user authentication to ensure secure access and provide a personalized blogging experience.
+
+### Technologies Used
+
+* Front-end framework
+* Back-end framework
+* Database system
+* Authentication services
+
+### Features
+
+* User registration and login
+* Secure user authentication
+* Create new blog posts
+* Edit existing blog posts
+* Delete blog posts
+* View published blogs
+* Personalized user experience
+* Persistent data storage
+
+### Live Demo
+
+https://onlineblogpost.vercel.app/
+
 
 ## Acknowledgement
 
