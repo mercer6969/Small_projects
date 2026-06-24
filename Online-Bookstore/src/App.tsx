@@ -1,429 +1,222 @@
-import { AuthProvider, useAuth } from './lib/auth';
-import { useState, useEffect, FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
-import { LogOut, Plus, Edit3, Trash2, ArrowLeft, PenTool } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Search, BookOpen } from 'lucide-react';
 
-interface Post {
+interface Book {
   id: string;
   title: string;
-  body: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-  profiles: { display_name: string } | null;
+  author: string;
+  price: number;
+  genre: string | null;
+  description: string | null;
+  cover_url: string | null;
 }
 
-type View = 'home' | 'post' | 'new' | 'edit' | 'auth';
+type BookFormData = Omit<Book, 'id'>;
 
-function App() {
-  return (
-    <AuthProvider>
-      <AppInner />
-    </AuthProvider>
-  );
-}
+const emptyForm: BookFormData = {
+  title: '',
+  author: '',
+  price: 0,
+  genre: '',
+  description: '',
+  cover_url: '',
+};
 
-function AppInner() {
-  const { user, loading } = useAuth();
-  const [view, setView] = useState<View>('home');
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [singlePost, setSinglePost] = useState<Post | null>(null);
+const GENRES = [
+  'Fiction', 'Non-Fiction', 'Science Fiction', 'Fantasy',
+  'Mystery', 'Thriller', 'Romance', 'Biography',
+  'History', 'Science', 'Self-Help', 'Poetry'
+];
 
-  useEffect(() => {
-    if (view === 'home') fetchPosts();
-  }, [view]);
-
-  useEffect(() => {
-    if (view === 'post' && selectedPostId) fetchSinglePost(selectedPostId);
-  }, [view, selectedPostId]);
-
-  async function fetchPosts() {
-    const { data } = await supabase
-      .from('posts')
-      .select('*, profiles(display_name)')
-      .order('created_at', { ascending: false });
-    if (data) setPosts(data as Post[]);
-  }
-
-  async function fetchSinglePost(id: string) {
-    const { data } = await supabase
-      .from('posts')
-      .select('*, profiles(display_name)')
-      .eq('id', id)
-      .single();
-    if (data) setSinglePost(data as Post);
-  }
-
-  function goToPost(id: string) {
-    setSelectedPostId(id);
-    setView('post');
-  }
-
-  function goHome() {
-    setSelectedPostId(null);
-    setSinglePost(null);
-    setView('home');
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <p className="text-stone-400">Loading...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-stone-50 text-stone-800">
-      <Header
-        view={view}
-        setView={setView}
-        goHome={goHome}
-      />
-      <main className="max-w-2xl mx-auto px-4 py-8">
-        {view === 'home' && (
-          <PostList posts={posts} goToPost={goToPost} />
-        )}
-        {view === 'post' && singlePost && (
-          <PostView
-            post={singlePost}
-            goHome={goHome}
-            setView={setView}
-            setSelectedPostId={setSelectedPostId}
-            refresh={fetchPosts}
-          />
-        )}
-        {view === 'auth' && (
-          <AuthForm onDone={goHome} />
-        )}
-        {(view === 'new' || view === 'edit') && (
-          <PostForm
-            mode={view}
-            postId={selectedPostId}
-            existingPost={view === 'edit' ? singlePost : null}
-            onDone={goHome}
-          />
-        )}
-      </main>
-    </div>
-  );
-}
-
-function Header({ view, setView, goHome }: { view: View; setView: (v: View) => void; goHome: () => void }) {
-  const { user, signOut } = useAuth();
-
-  return (
-    <header className="border-b border-stone-200 bg-white">
-      <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-        <button onClick={goHome} className="flex items-center gap-2 text-stone-700 hover:text-stone-900 font-medium">
-          <PenTool size={20} />
-          <span>My Journal</span>
-        </button>
-        <div className="flex items-center gap-3">
-          {user ? (
-            <>
-              {view === 'home' && (
-                <button
-                  onClick={() => setView('new')}
-                  className="flex items-center gap-1 text-sm bg-stone-800 text-white px-3 py-1.5 rounded hover:bg-stone-700"
-                >
-                  <Plus size={16} />
-                  New post
-                </button>
-              )}
-              <button
-                onClick={signOut}
-                className="text-stone-400 hover:text-stone-600"
-                title="Sign out"
-              >
-                <LogOut size={18} />
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setView('auth')}
-              className="text-sm text-stone-600 hover:text-stone-900 underline"
-            >
-              Sign in
-            </button>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function PostList({ posts, goToPost }: { posts: Post[]; goToPost: (id: string) => void }) {
-  const { user } = useAuth();
-
-  if (posts.length === 0) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-stone-400 mb-2">No posts yet.</p>
-        {user && (
-          <p className="text-stone-500 text-sm">Click "New post" to write something.</p>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {posts.map((post) => (
-        <article key={post.id} className="bg-white rounded border border-stone-200 p-5 hover:border-stone-300 transition-colors">
-          <button
-            onClick={() => goToPost(post.id)}
-            className="text-left w-full"
-          >
-            <h2 className="text-lg font-semibold text-stone-800 mb-1 hover:underline">{post.title}</h2>
-            <p className="text-sm text-stone-500 mb-3">
-              {post.profiles?.display_name || 'Anonymous'} &middot; {formatDate(post.created_at)}
-            </p>
-            <p className="text-stone-600 leading-relaxed line-clamp-3">
-              {post.body}
-            </p>
-          </button>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function PostView({ post, goHome, setView, setSelectedPostId, refresh }: {
-  post: Post;
-  goHome: () => void;
-  setView: (v: View) => void;
-  setSelectedPostId: (id: string | null) => void;
-  refresh: () => void;
+function BookForm({ initial, onSubmit, onCancel, submitLabel }: {
+  initial: BookFormData;
+  onSubmit: (data: BookFormData) => void;
+  onCancel: () => void;
+  submitLabel: string;
 }) {
-  const { user } = useAuth();
-
-  async function handleDelete() {
-    if (!confirm('Delete this post?')) return;
-    await supabase.from('posts').delete().eq('id', post.id);
-    refresh();
-    goHome();
-  }
+  const [form, setForm] = useState<BookFormData>(initial);
 
   return (
-    <div>
-      <button onClick={goHome} className="flex items-center gap-1 text-sm text-stone-500 hover:text-stone-700 mb-6">
-        <ArrowLeft size={16} />
-        Back
-      </button>
-      <article>
-        <h1 className="text-2xl font-bold text-stone-900 mb-2">{post.title}</h1>
-        <p className="text-sm text-stone-500 mb-6">
-          {post.profiles?.display_name || 'Anonymous'} &middot; {formatDate(post.created_at)}
-          {post.updated_at !== post.created_at && (
-            <> &middot; edited {formatDate(post.updated_at)}</>
-          )}
-        </p>
-        <div className="prose prose-stone whitespace-pre-wrap leading-relaxed text-stone-700">
-          {post.body}
-        </div>
-      </article>
-      {user?.id === post.user_id && (
-        <div className="flex gap-3 mt-8 pt-6 border-t border-stone-200">
-          <button
-            onClick={() => { setSelectedPostId(post.id); setView('edit'); }}
-            className="flex items-center gap-1 text-sm text-stone-600 hover:text-stone-900"
-          >
-            <Edit3 size={14} />
-            Edit
-          </button>
-          <button
-            onClick={handleDelete}
-            className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"
-          >
-            <Trash2 size={14} />
-            Delete
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+      <div className="bg-white w-full max-w-md p-6 border border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium">{submitLabel} Book</h2>
+          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+            <X size={20} />
           </button>
         </div>
-      )}
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-3">
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Title</label>
+            <input type="text" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="w-full border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Author</label>
+            <input type="text" required value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })}
+              className="w-full border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Price ($)</label>
+              <input type="number" step="0.01" min="0" required value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
+                className="w-full border border-gray-300 px-3 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Genre</label>
+              <select value={form.genre || ''} onChange={(e) => setForm({ ...form, genre: e.target.value || null })}
+                className="w-full border border-gray-300 px-3 py-1.5 text-sm bg-white">
+                <option value="">-</option>
+                {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Description</label>
+            <textarea rows={3} value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value || null })}
+              className="w-full border border-gray-300 px-3 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Cover URL</label>
+            <input type="url" value={form.cover_url || ''} onChange={(e) => setForm({ ...form, cover_url: e.target.value || null })}
+              className="w-full border border-gray-300 px-3 py-1.5 text-sm" />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onCancel} className="flex-1 border border-gray-300 py-1.5 text-sm hover:bg-gray-50">Cancel</button>
+            <button type="submit" className="flex-1 bg-gray-800 text-white py-1.5 text-sm hover:bg-gray-900">{submitLabel}</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
 
-function PostForm({ mode, postId, existingPost, onDone }: {
-  mode: 'new' | 'edit';
-  postId: string | null;
-  existingPost: Post | null;
-  onDone: () => void;
-}) {
-  const { user } = useAuth();
-  const [title, setTitle] = useState(existingPost?.title ?? '');
-  const [body, setBody] = useState(existingPost?.body ?? '');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+export default function App() {
+  const [books, setBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingBook, setEditingBook] = useState<Book | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!user) return <p className="text-stone-400">You need to sign in to write a post.</p>;
+  useEffect(() => { fetchBooks(); }, []);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-
-    try {
-      if (mode === 'new') {
-        const { error: err } = await supabase
-          .from('posts')
-          .insert({ title, body, user_id: user.id });
-        if (err) throw err;
-      } else if (mode === 'edit' && postId) {
-        const { error: err } = await supabase
-          .from('posts')
-          .update({ title, body, updated_at: new Date().toISOString() })
-          .eq('id', postId);
-        if (err) throw err;
-      }
-      onDone();
-    } catch {
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setSaving(false);
-    }
+  async function fetchBooks() {
+    setLoading(true);
+    const { data, error } = await supabase.from('books').select('*').order('created_at', { ascending: false });
+    if (error) setError(error.message);
+    else setBooks(data || []);
+    setLoading(false);
   }
 
+  async function handleAdd(data: BookFormData) {
+    const { error } = await supabase.from('books').insert(data);
+    if (error) { setError(error.message); return; }
+    setShowForm(false);
+    fetchBooks();
+  }
+
+  async function handleEdit(data: BookFormData) {
+    if (!editingBook) return;
+    const { error } = await supabase.from('books').update(data).eq('id', editingBook.id);
+    if (error) { setError(error.message); return; }
+    setEditingBook(null);
+    fetchBooks();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Delete this book?')) return;
+    const { error } = await supabase.from('books').delete().eq('id', id);
+    if (error) { setError(error.message); return; }
+    fetchBooks();
+  }
+
+  const filtered = books.filter(b =>
+    b.title.toLowerCase().includes(search.toLowerCase()) ||
+    b.author.toLowerCase().includes(search.toLowerCase()) ||
+    (b.genre || '').toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div>
-      <button onClick={onDone} className="flex items-center gap-1 text-sm text-stone-500 hover:text-stone-700 mb-6">
-        <ArrowLeft size={16} />
-        Back
-      </button>
-      <h1 className="text-xl font-bold mb-6">{mode === 'new' ? 'New Post' : 'Edit Post'}</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Title</label>
+    <div className="min-h-screen bg-white text-gray-900">
+      <header className="border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BookOpen size={20} />
+            <span className="font-medium">Bookstore</span>
+          </div>
+          <button onClick={() => setShowForm(true)} className="border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
+            + Add book
+          </button>
+        </div>
+      </header>
+
+      <div className="max-w-6xl mx-auto px-4 pt-6">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-stone-500"
+            placeholder="Search title, author, genre"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full border border-gray-300 py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:border-gray-500"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Content</label>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={12}
-            className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-stone-500 resize-y"
-          />
+      </div>
+
+      {error && (
+        <div className="max-w-6xl mx-auto px-4 mt-4">
+          <div className="border border-red-300 bg-red-50 text-red-700 px-3 py-2 text-sm flex justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)}><X size={14} /></button>
+          </div>
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-stone-800 text-white text-sm px-4 py-2 rounded hover:bg-stone-700 disabled:opacity-50"
-        >
-          {saving ? 'Saving...' : mode === 'new' ? 'Publish' : 'Save changes'}
-        </button>
-      </form>
-    </div>
-  );
-}
+      )}
 
-function AuthForm({ onDone }: { onDone: () => void }) {
-  const { signUp, signIn } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [success, setSuccess] = useState('');
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      if (isSignUp) {
-        await signUp(email, password, displayName);
-        setSuccess('Account created! You can now sign in.');
-        setIsSignUp(false);
-        setPassword('');
-      } else {
-        await signIn(email, password);
-        onDone();
-      }
-    } catch {
-      setError(isSignUp ? 'Could not create account. Email may already be in use.' : 'Invalid email or password.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="max-w-sm mx-auto">
-      <h1 className="text-xl font-bold mb-6">{isSignUp ? 'Create Account' : 'Sign In'}</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {isSignUp && (
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Display name</label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-stone-500"
-            />
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        {loading ? (
+          <p className="text-gray-500 text-sm">Loading...</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-gray-500 text-sm">{books.length === 0 ? 'No books yet. Add one.' : 'No matches.'}</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {filtered.map((book) => (
+              <div key={book.id} className="border border-gray-200 bg-white">
+                <div className="aspect-[2/3] bg-gray-50 flex items-center justify-center border-b border-gray-100">
+                  {book.cover_url ? (
+                    <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <BookOpen size={24} className="text-gray-300" />
+                  )}
+                </div>
+                <div className="p-3">
+                  <h3 className="text-sm font-medium truncate">{book.title}</h3>
+                  <p className="text-xs text-gray-500 truncate mt-0.5">{book.author}</p>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-sm font-medium">${book.price.toFixed(2)}</span>
+                    {book.genre && <span className="text-[10px] text-gray-400">{book.genre}</span>}
+                  </div>
+                  <div className="flex gap-2 mt-2 pt-1 border-t border-gray-100">
+                    <button onClick={() => setEditingBook(book)} className="text-xs text-gray-500 hover:text-gray-800">Edit</button>
+                    <button onClick={() => handleDelete(book.id)} className="text-xs text-gray-500 hover:text-red-600">Delete</button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-stone-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-stone-500"
-          />
-        </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {success && <p className="text-sm text-green-700">{success}</p>}
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full bg-stone-800 text-white text-sm px-4 py-2 rounded hover:bg-stone-700 disabled:opacity-50"
-        >
-          {busy ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
-        </button>
-      </form>
-      <p className="text-sm text-stone-500 mt-4 text-center">
-        {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-        <button
-          onClick={() => { setIsSignUp(!isSignUp); setError(''); setSuccess(''); }}
-          className="text-stone-700 underline"
-        >
-          {isSignUp ? 'Sign in' : 'Sign up'}
-        </button>
-      </p>
+      </main>
+
+      {showForm && <BookForm initial={emptyForm} onSubmit={handleAdd} onCancel={() => setShowForm(false)} submitLabel="Add" />}
+      {editingBook && <BookForm initial={{
+        title: editingBook.title,
+        author: editingBook.author,
+        price: editingBook.price,
+        genre: editingBook.genre,
+        description: editingBook.description,
+        cover_url: editingBook.cover_url,
+      }} onSubmit={handleEdit} onCancel={() => setEditingBook(null)} submitLabel="Save" />}
     </div>
   );
 }
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-export default App;
